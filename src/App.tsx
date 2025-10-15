@@ -1,25 +1,28 @@
-import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+// src/App.tsx
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Dashboard from "./pages/Dashboard";
+import AddInventory from "./pages/AddInventory";
+import ShowProducts from "./pages/ShowProducts";
+import Billing from "./pages/Billing";
+import BillHistory from "./pages/BillHistory";
+import Navbar from "./components/Navbar";
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <BrowserRouter>
+      <div className="min-h-screen flex flex-col">
+        <Navbar />
+        <div className="flex-1">
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/add-inventory" element={<AddInventory />} />
+            <Route path="/show-products" element={<ShowProducts />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/bills" element={<BillHistory />} />
+          </Routes>
+        </div>
+      </div>
+    </BrowserRouter>
   );
 }
 
