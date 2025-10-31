@@ -63,13 +63,13 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       const [productsRes, billsRes] = await Promise.all([
-        fetch("http://localhost:5000/api/products", {
+        fetch(" https://doubleprofit-backend.onrender.com/api/products", {
         method: "GET",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",
          },
       }),
-        fetch("http://localhost:5000/api/bills", {
+        fetch(" https://doubleprofit-backend.onrender.com/api/bills", {
         method: "GET",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",

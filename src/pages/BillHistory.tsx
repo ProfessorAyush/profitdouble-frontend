@@ -36,7 +36,7 @@ export default function BillHistory() {
 
   const fetchBills = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/bills",{
+      const res = await fetch(" https://doubleprofit-backend.onrender.com/api/bills",{
       headers: { "auth-token" : token || "" },
     });
       const data = await res.json();

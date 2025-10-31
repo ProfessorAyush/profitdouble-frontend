@@ -39,7 +39,7 @@ export default function ShowProducts() {
   const fetchProducts = async () => {
     
     try {
-      const res = await fetch("http://localhost:5000/api/products", {
+      const res = await fetch(" https://doubleprofit-backend.onrender.com/api/products", {
         method: "GET",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",
@@ -60,7 +60,7 @@ export default function ShowProducts() {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
 
     try {
-      await fetch(`http://localhost:5000/api/products/${id}`, { method: "DELETE",headers: { "Content-Type": "application/json",
+      await fetch(` https://doubleprofit-backend.onrender.com/api/products/${id}`, { method: "DELETE",headers: { "Content-Type": "application/json",
           "auth-token" : token || "",
          }, });
       setProducts(products.filter((p) => p._id !== id));
@@ -106,7 +106,7 @@ export default function ShowProducts() {
             : undefined,
         description: editForm.description || undefined,
       };
-      const res = await fetch(`http://localhost:5000/api/products/${id}`, {
+      const res = await fetch(` https://doubleprofit-backend.onrender.com/api/products/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",
