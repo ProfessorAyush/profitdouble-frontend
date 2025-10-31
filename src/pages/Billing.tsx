@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Receipt, ShoppingCart, Plus, Trash2, Package, DollarSign, Hash, CheckCircle, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type Product = {
   _id: string;
@@ -23,15 +24,58 @@ export default function Billing() {
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
   const [generatedTotal, setGeneratedTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
-    const data = await fetch("http://localhost:5000/api/products")
-      .then(res => res.json());
-    setProducts(data.filter((p: { quantity: number; }) => p.quantity > 0));
+    try {
+      setLoading(true);
+      const userInfoString = localStorage.getItem("userInfo");
+      const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+      const token = userInfo?.token || "";
+
+      const res = await fetch("http://localhost:5000/api/products", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": token,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to fetch products");
+      }
+
+      const data = await res.json();
+      
+      // Check if data is an array
+      if (Array.isArray(data)) {
+        setProducts(data.filter((p: Product) => p.quantity > 0));
+      } else if (data.products && Array.isArray(data.products)) {
+        // In case API returns { products: [...] }
+        setProducts(data.products.filter((p: Product) => p.quantity > 0));
+      } else {
+        console.error("Invalid data format:", data);
+        setProducts([]);
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      alert("Failed to load products. Please try again.");
+      setProducts([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAddRow = () => {
@@ -94,19 +138,38 @@ export default function Billing() {
       size: b.size || undefined
     }));
 
-    const res = await fetch("http://localhost:5000/api/bills", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ items }),
-    });
+    try {
+      setLoading(true);
+      const userInfoString = localStorage.getItem("userInfo");
+      const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+      const token = userInfo?.token || "";
 
-    const data = await res.json();
-    setGeneratedTotal(data.totalAmount);
-    setShowSuccess(true);
-    setBillItems([]);
-    fetchProducts();
+      const res = await fetch("http://localhost:5000/api/bills", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "auth-token": token,
+        },
+        body: JSON.stringify({ items }),
+      });
 
-    setTimeout(() => setShowSuccess(false), 5000);
+      if (!res.ok) {
+        throw new Error("Failed to generate bill");
+      }
+
+      const data = await res.json();
+      setGeneratedTotal(data.totalAmount);
+      setShowSuccess(true);
+      setBillItems([]);
+      fetchProducts();
+
+      setTimeout(() => setShowSuccess(false), 5000);
+    } catch (error) {
+      console.error("Error generating bill:", error);
+      alert("Failed to generate bill. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const total = billItems.reduce((acc, item) => acc + item.quantity * item.price, 0);
@@ -131,7 +194,7 @@ export default function Billing() {
               <CheckCircle className="text-green-400" size={24} />
               <div>
                 <span className="text-green-400 font-medium block">Bill generated successfully!</span>
-                <span className="text-green-300 text-sm">Total Amount: ₹{generatedTotal.toFixed(2)}</span>
+                <span className="text-green-300 text-sm">Total Amount: ₹{generatedTotal}</span>
               </div>
             </div>
           </div>
@@ -149,7 +212,12 @@ export default function Billing() {
               </div>
 
               <div className="p-6">
-                {billItems.length === 0 ? (
+                {loading && products.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                    <p className="text-gray-400">Loading products...</p>
+                  </div>
+                ) : billItems.length === 0 ? (
                   <div className="text-center py-12">
                     <Package className="mx-auto text-gray-600 mb-4" size={64} />
                     <p className="text-gray-400 text-lg">No items in bill</p>
@@ -172,15 +240,27 @@ export default function Billing() {
                               className="w-full bg-gray-600 border border-gray-500 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                             >
                               <option value="">Select Product</option>
-                              {products
-                                .filter(p =>
-                                  !billItems.some(b => b.productId === p._id && JSON.stringify(b.size || null) === JSON.stringify(p.size || null))
-                                )
-                                .map(p => (
-                                  <option key={p._id} value={p._id}>
-                                    {p.name} {p.size ? `(${p.size.height || "-"}×${p.size.width || "-"}×${p.size.depth || "-"})` : ""} - Stock: {p.quantity}
-                                  </option>
-                                ))}
+                              {products.map(p => {
+                                // Check if this product is already in bill (excluding current row)
+                                const isUsed = billItems.some((b, i) => 
+                                  i !== idx && 
+                                  b.productId === p._id && 
+                                  JSON.stringify(b.size || null) === JSON.stringify(p.size || null)
+                                );
+                                
+                                // Check if this is the currently selected product
+                                const isSelected = item.productId === p._id;
+                                
+                                // Show if it's selected OR not used by other rows
+                                if (isSelected || !isUsed) {
+                                  return (
+                                    <option key={p._id} value={p._id}>
+                                      {p.name} {p.size ? `(${p.size.height || "-"}×${p.size.width || "-"}×${p.size.depth || "-"})` : ""} - Stock: {p.quantity}
+                                    </option>
+                                  );
+                                }
+                                return null;
+                              })}
                             </select>
                           </div>
 
@@ -198,7 +278,7 @@ export default function Billing() {
                                     min={1}
                                     max={item.maxQty}
                                     value={item.quantity}
-                                    onChange={e => handleQtyChange(idx, parseInt(e.target.value))}
+                                    onChange={e => handleQtyChange(idx, parseInt(e.target.value) || 1)}
                                     className="w-full bg-gray-600 border border-gray-500 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                                   />
                                   <p className="text-xs text-gray-400 mt-1">Max: {item.maxQty}</p>
@@ -217,7 +297,7 @@ export default function Billing() {
                                       step="0.01"
                                       min={0}
                                       value={item.price}
-                                      onChange={e => handlePriceChange(idx, parseFloat(e.target.value))}
+                                      onChange={e => handlePriceChange(idx, parseFloat(e.target.value) || 0)}
                                       className="w-full bg-gray-600 border border-gray-500 text-white rounded-lg pl-8 pr-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all"
                                     />
                                   </div>
@@ -258,7 +338,8 @@ export default function Billing() {
                 {/* Add Product Button */}
                 <button
                   onClick={handleAddRow}
-                  className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all flex items-center justify-center space-x-2 font-medium shadow-lg"
+                  disabled={loading || products.length === 0}
+                  className="w-full mt-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all flex items-center justify-center space-x-2 font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus size={20} />
                   <span>Add Product</span>
@@ -299,11 +380,20 @@ export default function Billing() {
                 {/* Generate Bill Button */}
                 <button
                   onClick={handleSubmit}
-                  disabled={billItems.length === 0}
+                  disabled={billItems.length === 0 || loading}
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold py-4 rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
                 >
-                  <Receipt size={20} />
-                  <span>Generate Bill</span>
+                  {loading ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Receipt size={20} />
+                      <span>Generate Bill</span>
+                    </>
+                  )}
                 </button>
 
                 {/* Info Box */}

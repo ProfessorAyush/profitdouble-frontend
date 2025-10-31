@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Package, DollarSign, Hash, Ruler, FileText, Sparkles, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function AddInventory() {
   const [form, setForm] = useState({
@@ -11,10 +12,18 @@ export default function AddInventory() {
     height: "",
     width: "",
     depth: "",
-    description: ""
+    description: "",
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,7 +31,7 @@ export default function AddInventory() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const productData = {
+    const productData = { 
       name: form.name,
       brand: form.brand,
       sellingPrice: parseFloat(form.sellingPrice),
@@ -38,11 +47,16 @@ export default function AddInventory() {
 
     try {
       setLoading(true);
+      const userInfoString = localStorage.getItem('userInfo');
+      const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+      const token = userInfo?.token || "";
       const res = await fetch("http://localhost:5000/api/products", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "auth-token" : token || "",
+         },
         body: JSON.stringify(productData)
-      });
+      }); 
 
       if (!res.ok) {
         const err = await res.json();

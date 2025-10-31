@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Package, Edit2, Trash2, Save, X, TrendingUp, Box, DollarSign, Ruler, FileText, Search, Filter } from "lucide-react";
-
+import { useNavigate } from "react-router-dom";
+const userInfoString = localStorage.getItem('userInfo');
+const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+const token = userInfo?.token || "";
 type Product = {
   _id: string;
   name: string;
@@ -10,6 +13,7 @@ type Product = {
   quantity: number;
   size?: { height?: number; width?: number; depth?: number };
   description?: string;
+  token?: string;
 };
 
 export default function ShowProducts() {
@@ -19,18 +23,34 @@ export default function ShowProducts() {
   const [editForm, setEditForm] = useState<any>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [filterLowStock, setFilterLowStock] = useState(false);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     fetchProducts();
   }, []);
 
   const fetchProducts = async () => {
+    
     try {
-      const res = await fetch("http://localhost:5000/api/products");
+      const res = await fetch("http://localhost:5000/api/products", {
+        method: "GET",
+        headers: { "Content-Type": "application/json",
+          "auth-token" : token || "",
+         },
+      });
       const data = await res.json();
-      setProducts(data);
+      // Ensure data is an array before setting state
+      setProducts(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setProducts([]); // Set empty array on error
     } finally {
       setLoading(false);
     }
@@ -40,7 +60,9 @@ export default function ShowProducts() {
     if (!window.confirm("Are you sure you want to delete this product?")) return;
 
     try {
-      await fetch(`http://localhost:5000/api/products/${id}`, { method: "DELETE" });
+      await fetch(`http://localhost:5000/api/products/${id}`, { method: "DELETE",headers: { "Content-Type": "application/json",
+          "auth-token" : token || "",
+         }, });
       setProducts(products.filter((p) => p._id !== id));
     } catch (err) {
       console.error(err);
@@ -86,7 +108,9 @@ export default function ShowProducts() {
       };
       const res = await fetch(`http://localhost:5000/api/products/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json",
+          "auth-token" : token || "",
+         },
         body: JSON.stringify(updatedProduct),
       });
       const data = await res.json();

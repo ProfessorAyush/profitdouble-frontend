@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import { 
   TrendingUp, TrendingDown, DollarSign, Package, ShoppingCart, 
   AlertCircle, BarChart3, PieChart, Activity, Archive, 
@@ -8,7 +9,16 @@ import {
   BarChart, Bar, LineChart, Line, PieChart as RePieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart
 } from "recharts";
+import { useNavigate } from "react-router-dom";
 
+const isLoggedIn = () => {
+  const user = localStorage.getItem("userInfo");
+  return user ? true : false;
+};
+
+const userInfoString = localStorage.getItem('userInfo');
+const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+const token = userInfo?.token || "";
 type Product = {
   _id: string;
   name: string;
@@ -37,35 +47,57 @@ export default function Dashboard() {
   const [products, setProducts] = useState<Product[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
+  const userInfo = localStorage.getItem("userInfo");
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      navigate("/login");
+    }
+    else{
+      fetchData();
+    }
+  }, [navigate]);
 
   const fetchData = async () => {
     try {
       const [productsRes, billsRes] = await Promise.all([
-        fetch("http://localhost:5000/api/products"),
-        fetch("http://localhost:5000/api/bills")
+        fetch("http://localhost:5000/api/products", {
+        method: "GET",
+        headers: { "Content-Type": "application/json",
+          "auth-token" : token || "",
+         },
+      }),
+        fetch("http://localhost:5000/api/bills", {
+        method: "GET",
+        headers: { "Content-Type": "application/json",
+          "auth-token" : token || "",
+         },
+      })
       ]);
       const productsData = await productsRes.json();
       const billsData = await billsRes.json();
-      setProducts(productsData);
-      setBills(billsData);
+      setProducts(Array.isArray(productsData) ? productsData : []);
+      setBills(Array.isArray(billsData) ? billsData : []);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
+  // if (!loggedIn) return <Navigate to="/login" replace />;
+
 
   // Calculate metrics
-  const totalProducts = products.length;
-  const totalStock = products.reduce((sum, p) => sum + p.quantity, 0);
-  const lowStockItems = products.filter(p => p.quantity < 10).length;
-  const totalRevenue = bills.reduce((sum, b) => sum + b.totalAmount, 0);
-  const totalBills = bills.length;
-  const avgBillValue = totalBills > 0 ? totalRevenue / totalBills : 0;
+  const totalProducts = Array.isArray(products) ? products.length : 0;
+const totalStock = Array.isArray(products) ? products.reduce((sum, p) => sum + p.quantity, 0) : 0;
+const lowStockItems = Array.isArray(products) ? products.filter(p => p.quantity < 10).length : 0;
+
+const totalRevenue = Array.isArray(bills) ? bills.reduce((sum, b) => sum + b.totalAmount, 0) : 0;
+const totalBills = Array.isArray(bills) ? bills.length : 0;
+const avgBillValue = totalBills > 0 ? totalRevenue / totalBills : 0;
+
 
   const totalInventoryValue = products.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
   const potentialRevenue = products.reduce((sum, p) => sum + (p.sellingPrice * p.quantity), 0);
@@ -273,7 +305,7 @@ export default function Dashboard() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }: any) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                  label={false}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"
@@ -284,6 +316,15 @@ export default function Dashboard() {
                 </Pie>
                 <Tooltip 
                   contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151', borderRadius: '8px' }}
+                />
+                <Legend 
+                  verticalAlign="bottom" 
+                  height={36}
+                  formatter={(value, entry: any) => (
+                    <span style={{ color: '#9ca3af', fontSize: '12px' }}>
+                      {value}: {entry.payload.value}
+                    </span>
+                  )}
                 />
               </RePieChart>
             </ResponsiveContainer>

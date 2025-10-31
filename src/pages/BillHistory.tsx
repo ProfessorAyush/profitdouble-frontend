@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Receipt, Calendar, Package, DollarSign, FileText, Clock, TrendingUp, AlertCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 type BillItem = {
   name: string;
@@ -15,9 +16,19 @@ type Bill = {
   createdAt: string;
 };
 
+const token = JSON.parse(localStorage.getItem("userInfo") || "{}")?.token;
+
 export default function BillHistory() {
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const userInfo = localStorage.getItem("userInfo");
+    if (!userInfo) {
+      navigate("/login");
+    }
+  }, [navigate]);
 
   useEffect(() => {
     fetchBills();
@@ -25,7 +36,9 @@ export default function BillHistory() {
 
   const fetchBills = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/bills");
+      const res = await fetch("http://localhost:5000/api/bills",{
+      headers: { "auth-token" : token || "" },
+    });
       const data = await res.json();
       setBills(data);
     } catch (err) {
@@ -35,7 +48,9 @@ export default function BillHistory() {
     }
   };
 
-  const totalRevenue = bills.reduce((sum, bill) => sum + bill.totalAmount, 0);
+  const totalRevenue = Array.isArray(bills) 
+  ? bills.reduce((sum, bill) => sum + bill.totalAmount, 0) 
+  : 0;
   const totalBills = bills.length;
   const avgBillAmount = totalBills > 0 ? totalRevenue / totalBills : 0;
 
