@@ -57,14 +57,14 @@ export default function AIDashboard() {
   const fetchData = async () => {
     try {
       const [productsRes, billsRes] = await Promise.all([
-        fetch(" https://doubleprofit-backend.onrender.com/api/products", {
+        fetch(" https://doubleprofit-backend.onrender.com/products", {
           method: "GET",
           headers: { 
             "Content-Type": "application/json",
             "auth-token": token 
           },
         }),
-        fetch(" https://doubleprofit-backend.onrender.com/api/bills", {
+        fetch(" https://doubleprofit-backend.onrender.com/bills", {
           method: "GET",
           headers: { 
             "Content-Type": "application/json",

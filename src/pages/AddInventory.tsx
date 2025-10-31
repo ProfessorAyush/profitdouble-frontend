@@ -50,7 +50,7 @@ export default function AddInventory() {
       const userInfoString = localStorage.getItem('userInfo');
       const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
       const token = userInfo?.token || "";
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/api/products", {
+      const res = await fetch("https://doubleprofit-backend.onrender.com/products", {
         method: "POST",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",

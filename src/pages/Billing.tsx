@@ -45,7 +45,7 @@ export default function Billing() {
       const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
       const token = userInfo?.token || "";
 
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/api/products", {
+      const res = await fetch(" https://doubleprofit-backend.onrender.com/products", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -144,7 +144,7 @@ export default function Billing() {
       const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
       const token = userInfo?.token || "";
 
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/api/bills", {
+      const res = await fetch(" https://doubleprofit-backend.onrender.com/bills", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
