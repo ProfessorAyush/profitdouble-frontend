@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { UserPlus, Mail, Lock, User, AlertCircle, Sparkles, CheckCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Register() {
+  const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -29,8 +31,7 @@ export default function Register() {
       if (!res.ok) throw new Error(data.message || "Registration failed");
 
       localStorage.setItem("userInfo", JSON.stringify(data));
-      // navigate("/");
-      alert("Registration successful!");
+      navigate("/");
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
