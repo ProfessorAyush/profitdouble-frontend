@@ -187,8 +187,7 @@ Provide insights about:
 5. Sales trends
 
 Format: Return ONLY 5 bullet points, each starting with an emoji and being concise (max 15 words each).`;
-
-      console.log("📤 Insights request to:", "http://localhost:5000/ai/chat");
+ 
 
       const response = await fetch(`${apiBaseUrl}/ai/chat`, {
         method: "POST",
@@ -282,8 +281,6 @@ TOP SELLERS: ${topProducts
     setLoading(true);
 
     try {
-      console.log("🚀 Starting API call...");
-      console.log("Token:", token ? "Present" : "Missing");
 
       const businessData = prepareBusinessData(products, bills);
       const conversationHistory = messages
@@ -305,7 +302,7 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
       console.log("📤 Sending request to:", `${apiBaseUrl}/ai/chat`);
       console.log("📝 Prompt:", prompt.substring(0, 100) + "...");
 
-      const response = await fetch("http://localhost:5000/ai/chat", {
+      const response = await fetch(`${apiBaseUrl}/ai/chat`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
