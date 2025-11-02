@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef,useContext } from "react";
+import { useEffect, useState, useRef, useContext } from "react";
 import {
   Sparkles,
   Send,
@@ -13,8 +13,10 @@ import {
   Lightbulb,
   ArrowRight,
 } from "lucide-react";
-import { useApi } from '../context/Apicontext';
-
+import { useApi } from "../context/Apicontext";
+const userInfoString = localStorage.getItem("userInfo");
+const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
+const token = userInfo?.token || "";
 type Message = {
   role: "user" | "assistant";
   content: string;
@@ -43,7 +45,7 @@ type Bill = {
 };
 
 export default function AIDashboard() {
-  const { apiBaseUrl } = useApi(); 
+  const { apiBaseUrl } = useApi();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -101,21 +103,32 @@ export default function AIDashboard() {
   };
 
   const extractTextFromResponse = (data: any): string => {
-    console.log("🔍 Extracting text from:", JSON.stringify(data).substring(0, 200));
-    
+    console.log(
+      "🔍 Extracting text from:",
+      JSON.stringify(data).substring(0, 200)
+    );
+
     // Handle direct string response
-    if (typeof data === 'string') {
+    if (typeof data === "string") {
       return data;
     }
 
     // Handle wrapped response format: { response: { candidates: [...] } }
-    if (data.response && typeof data.response === 'object') {
+    if (data.response && typeof data.response === "object") {
       const innerData = data.response;
-      if (innerData.candidates && Array.isArray(innerData.candidates) && innerData.candidates.length > 0) {
+      if (
+        innerData.candidates &&
+        Array.isArray(innerData.candidates) &&
+        innerData.candidates.length > 0
+      ) {
         const candidate = innerData.candidates[0];
-        if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+        if (
+          candidate.content &&
+          candidate.content.parts &&
+          Array.isArray(candidate.content.parts)
+        ) {
           const part = candidate.content.parts[0];
-          if (part && part.text && typeof part.text === 'string') {
+          if (part && part.text && typeof part.text === "string") {
             console.log("✅ Extracted from wrapped response");
             return part.text;
           }
@@ -124,20 +137,28 @@ export default function AIDashboard() {
     }
 
     // Handle direct response format (string)
-    if (data.response && typeof data.response === 'string') {
+    if (data.response && typeof data.response === "string") {
       return data.response;
     }
 
-    if (data.text && typeof data.text === 'string') {
+    if (data.text && typeof data.text === "string") {
       return data.text;
     }
 
     // Handle direct Gemini API format
-    if (data.candidates && Array.isArray(data.candidates) && data.candidates.length > 0) {
+    if (
+      data.candidates &&
+      Array.isArray(data.candidates) &&
+      data.candidates.length > 0
+    ) {
       const candidate = data.candidates[0];
-      if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+      if (
+        candidate.content &&
+        candidate.content.parts &&
+        Array.isArray(candidate.content.parts)
+      ) {
         const part = candidate.content.parts[0];
-        if (part && part.text && typeof part.text === 'string') {
+        if (part && part.text && typeof part.text === "string") {
           console.log("✅ Extracted from direct format");
           return part.text;
         }
@@ -152,7 +173,7 @@ export default function AIDashboard() {
     setLoadingInsights(true);
     try {
       console.log("🔍 Generating insights...");
-      
+
       const businessData = prepareBusinessData(prods, billsList);
       const prompt = `As a business analyst AI, analyze this inventory and sales data and provide 5 key actionable insights in bullet points. Be specific and data-driven:
 
@@ -173,7 +194,7 @@ Format: Return ONLY 5 bullet points, each starting with an emoji and being conci
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          "auth-token" : token || "",
         },
         body: JSON.stringify({ prompt }),
       });
@@ -263,7 +284,7 @@ TOP SELLERS: ${topProducts
     try {
       console.log("🚀 Starting API call...");
       console.log("Token:", token ? "Present" : "Missing");
-      
+
       const businessData = prepareBusinessData(products, bills);
       const conversationHistory = messages
         .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
@@ -288,7 +309,7 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+           "auth-token" : token || "",
         },
         body: JSON.stringify({ prompt }),
       });
