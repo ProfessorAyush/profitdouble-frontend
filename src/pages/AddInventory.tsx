@@ -1,12 +1,11 @@
 import { useEffect, useState, useContext } from "react";
 import { Package, DollarSign, Hash, Ruler, FileText, Sparkles, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import apiContext from '../context/Apicontext';
+import { useApi } from '../context/Apicontext';
 
 export default function AddInventory() {
 
-  const context = useContext(apiContext);
-  const { apiBaseUrl } = context || {};
+  const { apiBaseUrl } = useApi(); 
   const [form, setForm] = useState({
     name: "",
     brand: "",

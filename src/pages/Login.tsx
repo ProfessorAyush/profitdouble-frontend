@@ -1,11 +1,10 @@
 import { useState,useContext } from "react";
 import { LogIn, Mail, Lock, AlertCircle, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import apiContext from '../context/Apicontext';
+import { useApi } from '../context/Apicontext';
 
 export default function Login() {
-  const context = useContext(apiContext);
-  const { apiBaseUrl } = context || {};
+  const { apiBaseUrl } = useApi(); 
   const navigate = useNavigate();
   const [form, setForm] = useState({
     email: "",

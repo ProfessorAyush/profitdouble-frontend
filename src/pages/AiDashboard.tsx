@@ -13,7 +13,7 @@ import {
   Lightbulb,
   ArrowRight,
 } from "lucide-react";
-import apiContext from '../context/Apicontext';
+import { useApi } from '../context/Apicontext';
 
 type Message = {
   role: "user" | "assistant";
@@ -43,8 +43,7 @@ type Bill = {
 };
 
 export default function AIDashboard() {
-  const context = useContext(apiContext);
-  const { apiBaseUrl } = context || {};
+  const { apiBaseUrl } = useApi(); 
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);

@@ -1,7 +1,7 @@
 import { useEffect, useState,useContext } from "react";
 import { Receipt, ShoppingCart, Plus, Trash2, Package, DollarSign, Hash, CheckCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import apiContext from '../context/Apicontext';
+import { useApi } from '../context/Apicontext';
 
 type Product = {
   _id: string;
@@ -21,8 +21,7 @@ type BillItem = {
 };
 
 export default function Billing() {
-  const context = useContext(apiContext);
-  const { apiBaseUrl } = context || {};
+  const { apiBaseUrl } = useApi(); 
   const [products, setProducts] = useState<Product[]>([]);
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);

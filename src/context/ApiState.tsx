@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useState, ReactNode } from "react";
 import apiContext from "./Apicontext";
 
-export function ApiState({ children }: { children: React.ReactNode }) {
+export function ApiState({ children }: { children: ReactNode }) {
   const [apiBaseUrl, setApiBaseUrl] = useState("https://doubleprofit-backend.onrender.com");
-    return (
+
+  return (
     <apiContext.Provider value={{ apiBaseUrl, setApiBaseUrl }}>
-        {children}
+      {children}
     </apiContext.Provider>
-    );
+  );
 }

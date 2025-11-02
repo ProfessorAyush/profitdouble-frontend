@@ -1,7 +1,7 @@
 import { useEffect, useState, useContext } from "react";
 import { Package, Edit2, Trash2, Save, X, TrendingUp, Box, DollarSign, Ruler, FileText, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import apiContext from '../context/Apicontext';
+import { useApi } from '../context/Apicontext';
 const userInfoString = localStorage.getItem('userInfo');
 const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
 const token = userInfo?.token || "";
@@ -18,8 +18,7 @@ type Product = {
 };
 
 export default function ShowProducts() {
-  const context = useContext(apiContext);
-  const { apiBaseUrl } = context || {};
+  const { apiBaseUrl } = useApi(); 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
