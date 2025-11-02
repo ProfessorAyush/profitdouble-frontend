@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { Package, DollarSign, Hash, Ruler, FileText, Sparkles, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 
 export default function AddInventory() {
+
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [form, setForm] = useState({
     name: "",
     brand: "",
@@ -50,7 +54,7 @@ export default function AddInventory() {
       const userInfoString = localStorage.getItem('userInfo');
       const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
       const token = userInfo?.token || "";
-      const res = await fetch("https://doubleprofit-backend.onrender.com/products", {
+      const res = await fetch(`${apiBaseUrl}/products`, {
         method: "POST",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",

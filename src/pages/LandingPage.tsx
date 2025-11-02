@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 export default function LandingPage() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const features = [

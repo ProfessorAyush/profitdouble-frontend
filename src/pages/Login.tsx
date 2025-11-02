@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState,useContext } from "react";
 import { LogIn, Mail, Lock, AlertCircle, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 
 export default function Login() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const navigate = useNavigate();
   const [form, setForm] = useState({
     email: "",
@@ -20,7 +23,7 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/auth/login", {
+      const res = await fetch(`${apiBaseUrl}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),

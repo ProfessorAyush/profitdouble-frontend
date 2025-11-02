@@ -1,12 +1,19 @@
-import { useEffect, useState, useRef } from "react";
-import { 
-  Sparkles, Send, TrendingUp, AlertCircle, Target, Zap, 
-  Brain, MessageSquare, Loader2, BarChart3, Package, DollarSign,
-  ChevronRight, Lightbulb, ArrowRight
+import { useEffect, useState, useRef,useContext } from "react";
+import {
+  Sparkles,
+  Send,
+  AlertCircle,
+  Target,
+  Zap,
+  Brain,
+  MessageSquare,
+  Loader2,
+  Package,
+  DollarSign,
+  Lightbulb,
+  ArrowRight,
 } from "lucide-react";
-import dotenv from 'dotenv';
-// TODO: Replace with your actual Gemini API key
-const GEMINI_API_KEY = process.env.REACT_APP_GEMINI_API_KEY || "GEMINI_API_KEY";
+import apiContext from '../context/Apicontext';
 
 type Message = {
   role: "user" | "assistant";
@@ -25,12 +32,19 @@ type Product = {
 
 type Bill = {
   _id: string;
-  items: Array<{ productId: string; name: string; quantity: number; price: number }>;
+  items: Array<{
+    productId: string;
+    name: string;
+    quantity: number;
+    price: number;
+  }>;
   totalAmount: number;
   createdAt: string;
 };
 
 export default function AIDashboard() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,7 +54,7 @@ export default function AIDashboard() {
   const [loadingInsights, setLoadingInsights] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const userInfoString = localStorage.getItem('userInfo');
+  const userInfoString = localStorage.getItem("userInfo");
   const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
   const token = userInfo?.token || "";
 
@@ -57,29 +71,28 @@ export default function AIDashboard() {
   const fetchData = async () => {
     try {
       const [productsRes, billsRes] = await Promise.all([
-        fetch(" https://doubleprofit-backend.onrender.com/products", {
+        fetch(`${apiBaseUrl}/products`, {
           method: "GET",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "auth-token": token 
+            "auth-token": token,
           },
         }),
-        fetch(" https://doubleprofit-backend.onrender.com/bills", {
+        fetch(`${apiBaseUrl}/bills`, {
           method: "GET",
-          headers: { 
+          headers: {
             "Content-Type": "application/json",
-            "auth-token": token 
+            "auth-token": token,
           },
-        })
+        }),
       ]);
-      
+
       const productsData = await productsRes.json();
       const billsData = await billsRes.json();
-      
+
       setProducts(Array.isArray(productsData) ? productsData : []);
       setBills(Array.isArray(billsData) ? billsData : []);
-      
-      // Auto-generate insights on load
+
       if (productsData.length > 0 || billsData.length > 0) {
         generateAutoInsights(productsData, billsData);
       }
@@ -88,9 +101,59 @@ export default function AIDashboard() {
     }
   };
 
+  const extractTextFromResponse = (data: any): string => {
+    console.log("🔍 Extracting text from:", JSON.stringify(data).substring(0, 200));
+    
+    // Handle direct string response
+    if (typeof data === 'string') {
+      return data;
+    }
+
+    // Handle wrapped response format: { response: { candidates: [...] } }
+    if (data.response && typeof data.response === 'object') {
+      const innerData = data.response;
+      if (innerData.candidates && Array.isArray(innerData.candidates) && innerData.candidates.length > 0) {
+        const candidate = innerData.candidates[0];
+        if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+          const part = candidate.content.parts[0];
+          if (part && part.text && typeof part.text === 'string') {
+            console.log("✅ Extracted from wrapped response");
+            return part.text;
+          }
+        }
+      }
+    }
+
+    // Handle direct response format (string)
+    if (data.response && typeof data.response === 'string') {
+      return data.response;
+    }
+
+    if (data.text && typeof data.text === 'string') {
+      return data.text;
+    }
+
+    // Handle direct Gemini API format
+    if (data.candidates && Array.isArray(data.candidates) && data.candidates.length > 0) {
+      const candidate = data.candidates[0];
+      if (candidate.content && candidate.content.parts && Array.isArray(candidate.content.parts)) {
+        const part = candidate.content.parts[0];
+        if (part && part.text && typeof part.text === 'string') {
+          console.log("✅ Extracted from direct format");
+          return part.text;
+        }
+      }
+    }
+
+    console.error("❌ Could not extract text from response");
+    return "Unable to process response.";
+  };
+
   const generateAutoInsights = async (prods: Product[], billsList: Bill[]) => {
     setLoadingInsights(true);
     try {
+      console.log("🔍 Generating insights...");
+      
       const businessData = prepareBusinessData(prods, billsList);
       const prompt = `As a business analyst AI, analyze this inventory and sales data and provide 5 key actionable insights in bullet points. Be specific and data-driven:
 
@@ -105,36 +168,44 @@ Provide insights about:
 
 Format: Return ONLY 5 bullet points, each starting with an emoji and being concise (max 15 words each).`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: prompt }]
-            }]
-          })
-        }
-      );
+      console.log("📤 Insights request to:", "http://localhost:5000/ai/chat");
+
+      const response = await fetch(`${apiBaseUrl}/ai/chat`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      console.log("📥 Insights response status:", response.status);
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error("❌ Insights error:", errorText);
         throw new Error(`API Error: ${response.status}`);
       }
 
       const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Unable to generate insights.";
-      
-      // Better parsing - split by asterisks or numbers
+      console.log("✅ Insights API Response:", JSON.stringify(data, null, 2));
+
+      const text = extractTextFromResponse(data);
+      console.log("💡 Extracted insights text:", text);
+
       const insightsList = text
         .split(/\*\*|\n\n|\n/)
-        .map((line: string) => line.replace(/^[•\-\d\.\*\s]+/, '').trim())
+        .map((line: string) => line.replace(/^[•\-\d\.\*\s]+/, "").trim())
         .filter((line: string) => line.length > 10 && line.length < 200)
         .slice(0, 5);
-      
-      setInsights(insightsList.length > 0 ? insightsList : [text.substring(0, 500)]);
+
+      console.log("📋 Parsed insights:", insightsList);
+
+      setInsights(
+        insightsList.length > 0 ? insightsList : [text.substring(0, 500)]
+      );
     } catch (error) {
-      console.error("Error generating insights:", error);
+      console.error("❌ Error generating insights:", error);
       setInsights(["AI is currently unavailable. Please try again later."]);
     } finally {
       setLoadingInsights(false);
@@ -143,27 +214,37 @@ Format: Return ONLY 5 bullet points, each starting with an emoji and being conci
 
   const prepareBusinessData = (prods: Product[], billsList: Bill[]) => {
     const totalRevenue = billsList.reduce((sum, b) => sum + b.totalAmount, 0);
-    const lowStock = prods.filter(p => p.quantity < 10);
+    const lowStock = prods.filter((p) => p.quantity < 10);
     const topProducts = getTopSellingProducts(billsList).slice(0, 3);
-    
+
     return `
-INVENTORY: ${prods.length} products, Total Value: ₹${prods.reduce((s, p) => s + (p.costPrice * p.quantity), 0)}
-LOW STOCK: ${lowStock.length} items (${lowStock.map(p => p.name).join(', ')})
+INVENTORY: ${prods.length} products, Total Value: ₹${prods.reduce(
+      (s, p) => s + p.costPrice * p.quantity,
+      0
+    )}
+LOW STOCK: ${lowStock.length} items (${lowStock.map((p) => p.name).join(", ")})
 REVENUE: ₹${totalRevenue} from ${billsList.length} bills
-TOP SELLERS: ${topProducts.map(p => `${p.name} (${p.quantity} sold)`).join(', ')}
+TOP SELLERS: ${topProducts
+      .map((p) => `${p.name} (${p.quantity} sold)`)
+      .join(", ")}
     `.trim();
   };
 
   const getTopSellingProducts = (billsList: Bill[]) => {
     const salesMap = new Map<string, { name: string; quantity: number }>();
-    billsList.forEach(bill => {
-      bill.items.forEach(item => {
-        const existing = salesMap.get(item.productId) || { name: item.name, quantity: 0 };
+    billsList.forEach((bill) => {
+      bill.items.forEach((item) => {
+        const existing = salesMap.get(item.productId) || {
+          name: item.name,
+          quantity: 0,
+        };
         existing.quantity += item.quantity;
         salesMap.set(item.productId, existing);
       });
     });
-    return Array.from(salesMap.values()).sort((a, b) => b.quantity - a.quantity);
+    return Array.from(salesMap.values()).sort(
+      (a, b) => b.quantity - a.quantity
+    );
   };
 
   const handleSendMessage = async () => {
@@ -172,18 +253,22 @@ TOP SELLERS: ${topProducts.map(p => `${p.name} (${p.quantity} sold)`).join(', ')
     const userMessage: Message = {
       role: "user",
       content: input.trim(),
-      timestamp: new Date()
+      timestamp: new Date(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages((prev) => [...prev, userMessage]);
+    const userInput = input.trim();
     setInput("");
     setLoading(true);
 
     try {
+      console.log("🚀 Starting API call...");
+      console.log("Token:", token ? "Present" : "Missing");
+      
       const businessData = prepareBusinessData(products, bills);
-      const conversationHistory = messages.map(m => 
-        `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`
-      ).join("\n");
+      const conversationHistory = messages
+        .map((m) => `${m.role === "user" ? "User" : "Assistant"}: ${m.content}`)
+        .join("\n");
 
       const prompt = `You are an AI business consultant for an inventory management system called "Double Profit". 
 
@@ -193,55 +278,66 @@ ${businessData}
 CONVERSATION HISTORY:
 ${conversationHistory}
 
-USER QUESTION: ${input}
+USER QUESTION: ${userInput}
 
 Provide a helpful, concise answer (max 100 words). Use the business data to give specific insights. If asked about products, bills, or inventory, reference the actual data provided.`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: prompt }]
-            }]
-          })
-        }
-      );
+      console.log("📤 Sending request to:", `${apiBaseUrl}/ai/chat`);
+      console.log("📝 Prompt:", prompt.substring(0, 100) + "...");
+
+      const response = await fetch("http://localhost:5000/ai/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      console.log("📥 Response status:", response.status);
+      console.log("📥 Response ok:", response.ok);
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+        const errorText = await response.text();
+        console.error("❌ Error response:", errorText);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
-      
-      // Better error logging
-      console.log("API Response:", data);
-      
+      console.log("✅ Full API Response:", JSON.stringify(data, null, 2));
+      console.log("📊 Response type:", typeof data);
+      console.log("📊 Response keys:", Object.keys(data));
+
       if (data.error) {
         throw new Error(data.error.message || "API Error");
       }
-      
-      const aiResponse = data.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that request.";
+
+      const aiResponse = extractTextFromResponse(data);
+      console.log("💬 Extracted AI Response:", aiResponse);
 
       const assistantMessage: Message = {
         role: "assistant",
         content: aiResponse,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
 
-      setMessages(prev => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, assistantMessage]);
+      console.log("✅ Message added to state");
     } catch (error: any) {
-      console.error("Error calling Gemini API:", error);
+      console.error("❌ Error calling API:", error);
+      console.error("❌ Error stack:", error.stack);
       const errorMessage: Message = {
         role: "assistant",
-        content: `Error: ${error.message || "AI is currently unavailable. Please try again later."}`,
-        timestamp: new Date()
+        content: `Error: ${
+          error.message ||
+          "AI is currently unavailable. Please try again later."
+        }`,
+        timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+      console.log("🏁 Request finished");
     }
   };
 
@@ -249,52 +345,56 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
     "What products should I restock?",
     "Show me my top selling products",
     "How can I increase my profit?",
-    "What's my inventory worth?"
+    "What's my inventory worth?",
   ];
 
   const handleQuickPrompt = (prompt: string) => {
     setInput(prompt);
   };
 
-  // Calculate key metrics
   const totalRevenue = bills.reduce((sum, b) => sum + b.totalAmount, 0);
-  const lowStockCount = products.filter(p => p.quantity < 10).length;
-  const inventoryValue = products.reduce((sum, p) => sum + (p.costPrice * p.quantity), 0);
+  const lowStockCount = products.filter((p) => p.quantity < 10).length;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-4 sm:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
-        {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl mb-4 shadow-lg">
             <Sparkles className="text-white" size={32} />
           </div>
-          <h1 className="text-4xl font-bold text-white mb-2">AI Business Assistant</h1>
-          <p className="text-gray-400">Get intelligent insights and recommendations powered by AI</p>
+          <h1 className="text-4xl font-bold text-white mb-2">
+            AI Business Assistant
+          </h1>
+          <p className="text-gray-400">
+            Get intelligent insights and recommendations powered by AI
+          </p>
         </div>
 
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-5 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-blue-100 text-sm mb-1">Total Revenue</p>
-                <p className="text-white text-2xl font-bold">₹{(totalRevenue / 1000).toFixed(1)}K</p>
+                <p className="text-white text-2xl font-bold">
+                  ₹{(totalRevenue / 1000).toFixed(1)}K
+                </p>
               </div>
               <DollarSign className="text-blue-100" size={32} />
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-5 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-purple-100 text-sm mb-1">Products</p>
-                <p className="text-white text-2xl font-bold">{products.length}</p>
+                <p className="text-white text-2xl font-bold">
+                  {products.length}
+                </p>
               </div>
               <Package className="text-purple-100" size={32} />
             </div>
           </div>
-          
+
           <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl p-5 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
@@ -307,7 +407,6 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* AI Insights Panel */}
           <div className="lg:col-span-1">
             <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl border border-gray-700 overflow-hidden">
               <div className="bg-gradient-to-r from-purple-600 to-pink-600 p-4">
@@ -316,28 +415,42 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
                   AI Insights
                 </h2>
               </div>
-              
+
               <div className="p-4 space-y-3">
                 {loadingInsights ? (
                   <div className="flex items-center justify-center py-8">
-                    <Loader2 className="text-purple-400 animate-spin" size={32} />
+                    <Loader2
+                      className="text-purple-400 animate-spin"
+                      size={32}
+                    />
                   </div>
                 ) : insights.length > 0 ? (
                   insights.map((insight, idx) => (
-                    <div key={idx} className="bg-gray-700 bg-opacity-50 rounded-lg p-3 border border-gray-600">
+                    <div
+                      key={idx}
+                      className="bg-gray-700 bg-opacity-50 rounded-lg p-3 border border-gray-600"
+                    >
                       <div className="flex items-start space-x-2">
-                        <Lightbulb className="text-yellow-400 flex-shrink-0 mt-0.5" size={16} />
+                        <Lightbulb
+                          className="text-yellow-400 flex-shrink-0 mt-0.5"
+                          size={16}
+                        />
                         <p className="text-gray-300 text-sm">{insight}</p>
                       </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-8">
-                    <Sparkles className="mx-auto text-gray-600 mb-3" size={32} />
-                    <p className="text-gray-400 text-sm">AI insights will appear here</p>
+                    <Sparkles
+                      className="mx-auto text-gray-600 mb-3"
+                      size={32}
+                    />
+                    <p className="text-gray-400 text-sm">
+                      AI insights will appear here
+                    </p>
                   </div>
                 )}
-                
+
                 <button
                   onClick={() => generateAutoInsights(products, bills)}
                   disabled={loadingInsights}
@@ -349,7 +462,6 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
               </div>
             </div>
 
-            {/* Quick Actions */}
             <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl border border-gray-700 overflow-hidden mt-6">
               <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-4">
                 <h2 className="text-white font-bold text-lg flex items-center">
@@ -357,7 +469,7 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
                   Quick Questions
                 </h2>
               </div>
-              
+
               <div className="p-4 space-y-2">
                 {quickPrompts.map((prompt, idx) => (
                   <button
@@ -366,14 +478,16 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
                     className="w-full bg-gray-700 bg-opacity-50 text-left text-gray-300 text-sm py-2 px-3 rounded-lg hover:bg-gray-600 transition-all flex items-center justify-between group"
                   >
                     <span>{prompt}</span>
-                    <ArrowRight className="text-gray-500 group-hover:text-green-400 transition-colors" size={16} />
+                    <ArrowRight
+                      className="text-gray-500 group-hover:text-green-400 transition-colors"
+                      size={16}
+                    />
                   </button>
                 ))}
               </div>
             </div>
           </div>
 
-          {/* Chat Interface */}
           <div className="lg:col-span-2">
             <div className="bg-gray-800 bg-opacity-50 backdrop-blur-sm rounded-2xl border border-gray-700 overflow-hidden h-[600px] flex flex-col">
               <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4">
@@ -383,19 +497,25 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
                 </h2>
               </div>
 
-              {/* Messages Area */}
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.length === 0 ? (
                   <div className="text-center py-12">
                     <Brain className="mx-auto text-gray-600 mb-4" size={64} />
-                    <p className="text-gray-400 text-lg mb-2">Start a conversation</p>
-                    <p className="text-gray-500 text-sm">Ask me anything about your inventory, sales, or business strategy!</p>
+                    <p className="text-gray-400 text-lg mb-2">
+                      Start a conversation
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      Ask me anything about your inventory, sales, or business
+                      strategy!
+                    </p>
                   </div>
                 ) : (
                   messages.map((msg, idx) => (
                     <div
                       key={idx}
-                      className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                      className={`flex ${
+                        msg.role === "user" ? "justify-end" : "justify-start"
+                      }`}
                     >
                       <div
                         className={`max-w-[80%] rounded-2xl p-4 ${
@@ -404,30 +524,42 @@ Provide a helpful, concise answer (max 100 words). Use the business data to give
                             : "bg-gray-700 bg-opacity-50 text-gray-200 border border-gray-600"
                         }`}
                       >
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                        <p className={`text-xs mt-2 ${msg.role === "user" ? "text-blue-100" : "text-gray-500"}`}>
+                        <p className="text-sm whitespace-pre-wrap">
+                          {msg.content}
+                        </p>
+                        <p
+                          className={`text-xs mt-2 ${
+                            msg.role === "user"
+                              ? "text-blue-100"
+                              : "text-gray-500"
+                          }`}
+                        >
                           {msg.timestamp.toLocaleTimeString()}
                         </p>
                       </div>
                     </div>
                   ))
                 )}
-                
+
                 {loading && (
                   <div className="flex justify-start">
                     <div className="bg-gray-700 bg-opacity-50 rounded-2xl p-4 border border-gray-600">
                       <div className="flex items-center space-x-2">
-                        <Loader2 className="text-purple-400 animate-spin" size={20} />
-                        <p className="text-gray-400 text-sm">AI is thinking...</p>
+                        <Loader2
+                          className="text-purple-400 animate-spin"
+                          size={20}
+                        />
+                        <p className="text-gray-400 text-sm">
+                          AI is thinking...
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
-                
+
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
               <div className="p-4 bg-gray-900 bg-opacity-50 border-t border-gray-700">
                 <div className="flex space-x-2">
                   <input

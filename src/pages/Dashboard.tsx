@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useContext } from "react";
 
 import { 
   TrendingUp, TrendingDown, DollarSign, Package, ShoppingCart, 
@@ -10,6 +10,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, AreaChart
 } from "recharts";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 
 const isLoggedIn = () => {
   const user = localStorage.getItem("userInfo");
@@ -44,6 +45,8 @@ type Bill = {
 };
 
 export default function Dashboard() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [products, setProducts] = useState<Product[]>([]);
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,13 +66,13 @@ export default function Dashboard() {
   const fetchData = async () => {
     try {
       const [productsRes, billsRes] = await Promise.all([
-        fetch(" https://doubleprofit-backend.onrender.com/products", {
+        fetch(`${apiBaseUrl}/products`, {
         method: "GET",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",
          },
       }),
-        fetch(" https://doubleprofit-backend.onrender.com/bills", {
+        fetch(`${apiBaseUrl}/bills`, {
         method: "GET",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",

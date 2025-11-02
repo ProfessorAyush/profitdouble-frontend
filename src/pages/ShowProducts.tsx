@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { Package, Edit2, Trash2, Save, X, TrendingUp, Box, DollarSign, Ruler, FileText, Search, Filter } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 const userInfoString = localStorage.getItem('userInfo');
 const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
 const token = userInfo?.token || "";
@@ -17,6 +18,8 @@ type Product = {
 };
 
 export default function ShowProducts() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -39,7 +42,7 @@ export default function ShowProducts() {
   const fetchProducts = async () => {
     
     try {
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/products", {
+      const res = await fetch(`${apiBaseUrl}/products`, {
         method: "GET",
         headers: { "Content-Type": "application/json",
           "auth-token" : token || "",

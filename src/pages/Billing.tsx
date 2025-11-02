@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useContext } from "react";
 import { Receipt, ShoppingCart, Plus, Trash2, Package, DollarSign, Hash, CheckCircle, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 
 type Product = {
   _id: string;
@@ -20,6 +21,8 @@ type BillItem = {
 };
 
 export default function Billing() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [products, setProducts] = useState<Product[]>([]);
   const [billItems, setBillItems] = useState<BillItem[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -144,7 +147,7 @@ export default function Billing() {
       const userInfo = userInfoString ? JSON.parse(userInfoString) : null;
       const token = userInfo?.token || "";
 
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/bills", {
+      const res = await fetch(`${apiBaseUrl}/bills`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

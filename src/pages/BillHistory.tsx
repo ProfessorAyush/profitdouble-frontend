@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState,useContext } from "react";
 import { Receipt, Calendar, Package, DollarSign, FileText, Clock, TrendingUp, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 
 type BillItem = {
   name: string;
@@ -19,6 +20,8 @@ type Bill = {
 const token = JSON.parse(localStorage.getItem("userInfo") || "{}")?.token;
 
 export default function BillHistory() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const [bills, setBills] = useState<Bill[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -36,7 +39,7 @@ export default function BillHistory() {
 
   const fetchBills = async () => {
     try {
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/bills",{
+      const res = await fetch(`${apiBaseUrl}/bills`,{
       headers: { "auth-token" : token || "" },
     });
       const data = await res.json();

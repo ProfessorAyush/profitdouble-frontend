@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { UserPlus, Mail, Lock, User, AlertCircle, Sparkles, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import apiContext from '../context/Apicontext';
 
 export default function Register() {
+  const context = useContext(apiContext);
+  const { apiBaseUrl } = context || {};
   const navigate = useNavigate();
   const [form, setForm] = useState({
     name: "",
@@ -21,7 +24,7 @@ export default function Register() {
     setError("");
     setLoading(true);
     try {
-      const res = await fetch(" https://doubleprofit-backend.onrender.com/auth/register", {
+      const res = await fetch(`${apiBaseUrl}/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
