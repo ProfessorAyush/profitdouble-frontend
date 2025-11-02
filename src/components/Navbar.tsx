@@ -48,10 +48,10 @@ export default function Navbar() {
           {/* Logo - More Compact */}
           <Link to="/dashboard" className="flex items-center space-x-2 group flex-shrink-0">
             <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center transform group-hover:scale-105 transition-transform duration-200">
-              <span className="text-base font-bold">D</span>
+              <span className="text-base font-bold">P</span>
             </div>
             <span className="text-lg font-semibold hidden sm:block">
-              Double Profit
+              Profit Double
             </span>
           </Link>
 
